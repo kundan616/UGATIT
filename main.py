@@ -1,7 +1,7 @@
 from UGATIT import UGATIT
 import argparse
 from flask import Flask, request, Response, render_template, redirect, session, url_for
-from flask_uploads import UploadSet, configure_uploads, IMAGES, patch_request_class
+# from flask_uploads import UploadSet, configure_uploads, IMAGES, patch_request_class
 from flask_dropzone import Dropzone
 import os
 from utils import *
@@ -30,9 +30,9 @@ app.config['DROPZONE_REDIRECT_VIEW'] = 'results'
 # Uploads settings
 app.config['UPLOADED_PHOTOS_DEST'] = os.getcwd() + '/uploads'
 
-photos = UploadSet('photos', IMAGES)
-configure_uploads(app, photos)
-patch_request_class(app)  # set maximum file size, default is 16MB
+# photos = UploadSet('photos', IMAGES)
+# configure_uploads(app, photos)
+# patch_request_class(app)  # set maximum file size, default is 16MB
 
 """parsing and configuration"""
 
@@ -122,29 +122,40 @@ def runner(args):
 
         gan.test_endpoint_init()
         while True:
-            time.sleep(5)
+            time.sleep(1)
             messages = get_messages_from_queue()
             total_msg = len(messages)
             print("[INFO] Retrieved " + str(total_msg) + " messages")
             # email service
             email = EmailService()
             for message in messages:
-                total_msg = total_msg - 1
-                print("[INFO] " + str(total_msg) + " messages remain in queue")
+                print("[INFO] Message " + str(total_msg) + " being processed")
                 try:
                     try:
                         body = json.loads(message['Body'])
                         print(body)
+
+                        # By default crop image (cropping to occur in lambda soon)
+                        if 'bucket_cropped_key' in body:
+                            crop = False
+                        else:
+                            crop = True
+
                         bucket = body['bucket_name']
-                        bucket_key = body['bucket_key']
+                        if crop:
+                            bucket_key = body['bucket_key']
+                        else:
+                            bucket_key = body['bucket_cropped_key']
+
                         file_name = body['file_name']
                         email_addr = body['email']
-                        crop = body['crop']
-                        # Crop params
-                        x = crop['x']
-                        y = crop['y']
-                        width = crop['width']
-                        height = crop['height']
+
+                        if crop:
+                            crop = body['crop']
+                            x = crop['x']
+                            y = crop['y']
+                            width = crop['width']
+                            height = crop['height']
                     except Exception as e:
                         print()
                         print("ERROR: Parsing message")
@@ -159,17 +170,21 @@ def runner(args):
                         raise e
      
                     try:
-                        crop_img = image[y:y+height, x:x+width]
                         # Change color space
-                        crop_img = cv2.cvtColor(crop_img, cv2.COLOR_RGB2BGR)
+                        if crop:
+                            crop_img = image[y:y+height, x:x+width]
+                            crop_img = cv2.cvtColor(crop_img, cv2.COLOR_RGB2BGR)
+                        else:
+                            crop_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                     except Exception as e:
-                        print("ERROR: Cropping Image")
+                        print("ERROR: Cropping Image | Changing Color space")
                         print(e)
                         raise e
-                   
+
                     try:
-                        # Resize image
-                        crop_img = cv2.resize(crop_img, dsize=(256, 256))
+                        if crop:
+                            # Resize image
+                            crop_img = cv2.resize(crop_img, dsize=(256, 256))
                     except Exception as e:
                         print("ERROR: Resizing Image")
                         print(e)
@@ -179,7 +194,7 @@ def runner(args):
                         # do some fancy processing here....
                         fake_img = gan.test_endpoint(crop_img)
                     except Exception as e:
-                        print("ERROR: Prosccing image with GAN")
+                        print("ERROR: Processing image with GAN")
                         print(e)
                         raise e
 
@@ -202,6 +217,9 @@ def runner(args):
                 except Exception as e:
                     print('FATAL ERROR')
                     print(e)
+
+                total_msg = total_msg - 1
+                print("[INFO] " + str(total_msg) + " messages remain for worker to process")
 
 
 """main"""

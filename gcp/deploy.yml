@@ -34,57 +34,45 @@ spec:
     spec:
       containers:
       - name: "selfie2anime"
-        image: "gcr.io/devopstar/selfie2anime:latest"
+        image: "gcr.io/devopstar/selfie2anime-ugatit:latest"
         imagePullPolicy: "Always"
-        securityContext:
-          privileged: true
-          capabilities:
-            add:
-              - SYS_ADMIN
         env:
         - name: "QUEUE_NAME"
           valueFrom:
             configMapKeyRef:
               key: "QUEUE_NAME"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "BUCKET_NAME"
           valueFrom:
             configMapKeyRef:
               key: "BUCKET_NAME"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "SENDER_EMAIL"
           valueFrom:
             configMapKeyRef:
               key: "SENDER_EMAIL"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "AWS_ACCESS_KEY_ID"
           valueFrom:
             configMapKeyRef:
               key: "AWS_ACCESS_KEY_ID"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "AWS_SECRET_ACCESS_KEY"
           valueFrom:
             configMapKeyRef:
               key: "AWS_SECRET_ACCESS_KEY"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "AWS_DEFAULT_REGION"
           valueFrom:
             configMapKeyRef:
               key: "AWS_DEFAULT_REGION"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         - name: "PYTHONUNBUFFERED"
           valueFrom:
             configMapKeyRef:
               key: "PYTHONUNBUFFERED"
-              name: "selfie2anime-runner-config"
+              name: "selfie2anime-slim-config"
         resources:
           requests:
             memory: 4.5Gi
             cpu: 1000m
-        lifecycle:
-          postStart:
-            exec:
-              command: ["gcsfuse", "-o", "nonempty", "selfie2anime", "/app/checkpoint"]
-          preStop:
-            exec:
-              command: ["fusermount", "-u", "/app/checkpoint"]
