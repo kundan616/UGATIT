@@ -14,6 +14,10 @@ import tempfile
 queue_name = os.environ['QUEUE_NAME']
 bucket_name = os.environ['BUCKET_NAME']
 
+s3_resource = boto3.resource('s3')
+s3_client = boto3.client('s3')
+sqs_client = boto3.client('sqs')
+
 class ImageData:
 
     def __init__(self, load_size, channels, augment_flag):
@@ -118,8 +122,7 @@ def base64stringToImage(base64_string):
     return cv2.cvtColor(np.array(image), cv2.COLOR_BGR2RGB)
 
 def download_image(bucket, bucket_key):
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(bucket)
+    bucket = s3_resource.Bucket(bucket)
     object = bucket.Object(bucket_key)
     tmp = tempfile.NamedTemporaryFile()
     with open(tmp.name, 'wb') as f:
@@ -128,11 +131,10 @@ def download_image(bucket, bucket_key):
         return img
 
 def upload_image(image, file_name):
-    s3 = boto3.client('s3')
     file_name = 'outgoing/' + file_name
     image_string = cv2.imencode('.jpg', image)[1].tostring()
-    s3.put_object(Body=image_string, Bucket=bucket_name, Key=file_name, ContentType='image/jpeg')
-    file_url = s3.generate_presigned_url(
+    s3_client.put_object(Body=image_string, Bucket=bucket_name, Key=file_name, ContentType='image/jpeg')
+    file_url = s3_client.generate_presigned_url(
         ClientMethod='get_object',
         Params={
             'Bucket': bucket_name,
@@ -143,7 +145,6 @@ def upload_image(image, file_name):
     return file_url
 
 def get_messages_from_queue():
-    sqs_client = boto3.client('sqs')
     response = sqs_client.get_queue_url(QueueName=queue_name)
     queue_url = response['QueueUrl']
 

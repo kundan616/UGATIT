@@ -120,21 +120,25 @@ def runner(args):
         # show network architecture
         show_all_variables()
 
+        # SQS client for DLQ
+        sqs = boto3.client('sqs')
+        dlq_queue = sqs.get_queue_url(QueueName=os.environ['DLQ_NAME'])
+
+        # email service
+        email = EmailService()
+
         gan.test_endpoint_init()
         while True:
             time.sleep(1)
             messages = get_messages_from_queue()
             total_msg = len(messages)
-            print("[INFO] Retrieved " + str(total_msg) + " messages")
-            # email service
-            email = EmailService()
+            if total_msg > 0:
+                print("[INFO] Retrieved " + str(total_msg) + " messages")
             for message in messages:
                 print("[INFO] Message " + str(total_msg) + " being processed")
+                body = json.loads(message['Body'])
                 try:
                     try:
-                        body = json.loads(message['Body'])
-                        print(body)
-
                         # By default crop image (cropping to occur in lambda soon)
                         if 'bucket_cropped_key' in body:
                             crop = False
@@ -215,6 +219,11 @@ def runner(args):
                         raise e
 
                 except Exception as e:
+                    # try:
+                    #     response = sqs.send_message(QueueUrl=dlq_queue, MessageBody=body)
+                    # except Exception as e:
+                    #     print("ERROR: Failed to post to DLQ")
+                    #     print(e)
                     print('FATAL ERROR')
                     print(e)
 
