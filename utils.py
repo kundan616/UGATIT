@@ -134,7 +134,8 @@ def upload_image(image, file_name):
     full_file_name = 'outgoing/' + file_name
     image_string = cv2.imencode('.jpg', image)[1].tostring()
     s3_client.put_object(Body=image_string, Bucket=bucket_name, Key=full_file_name, ContentType='image/jpeg')
-    file_url = 'https://selfie2anime.com/outgoing/{}'.format(file_name)
+    # Generate URL for image
+    file_url = 'https://api.selfie2anime.com/analysis/me?uuid={}'.format(file_name[:-4])
     return file_url
 
 def get_messages_from_queue():
