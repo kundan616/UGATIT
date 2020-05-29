@@ -153,6 +153,7 @@ def runner(args):
 
                         file_name = body['file_name']
                         email_addr = body['email']
+                        token = body['token']
 
                         if crop:
                             crop = body['crop']
@@ -212,7 +213,8 @@ def runner(args):
                    
                     try:
                         # Send Email
-                        email.send_email(email_addr, image_url)
+                        delete_url = 'https://api.selfie2anime.com/analysis/delete?uuid={}&key={}'.format(file_name, token)
+                        email.send_email(email_addr, image_url, delete_url)
                     except Exception as e:
                         print("ERROR: Failed to send email")
                         print(e)

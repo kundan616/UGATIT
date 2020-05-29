@@ -131,17 +131,10 @@ def download_image(bucket, bucket_key):
         return img
 
 def upload_image(image, file_name):
-    file_name = 'outgoing/' + file_name
+    full_file_name = 'outgoing/' + file_name
     image_string = cv2.imencode('.jpg', image)[1].tostring()
-    s3_client.put_object(Body=image_string, Bucket=bucket_name, Key=file_name, ContentType='image/jpeg')
-    file_url = s3_client.generate_presigned_url(
-        ClientMethod='get_object',
-        Params={
-            'Bucket': bucket_name,
-            'Key': file_name
-        },
-        ExpiresIn=604800
-    )
+    s3_client.put_object(Body=image_string, Bucket=bucket_name, Key=full_file_name, ContentType='image/jpeg')
+    file_url = 'https://selfie2anime.com/outgoing/{}'.format(file_name)
     return file_url
 
 def get_messages_from_queue():
